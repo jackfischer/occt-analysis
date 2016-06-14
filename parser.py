@@ -1,10 +1,6 @@
 import json, csv, time
 from geopy.distance import great_circle as distance
 #from multiprocessing import Pool
-import matplotlib.pyplot as plt
-import matplotlib.mlab as mlab
-import numpy as np
-
 
 def load_points():
   '''read coordinates of route points from coordinates.csv into memory'''
@@ -66,10 +62,13 @@ points = load_points() #read route into memory
 graph = load_graph() #load graph of distances between points
 f = open("dump1")
 distribution = []
+distribution_f = open("distribution.txt", 'w')
+heat_points = []
+heat_points_f = open("heat_points.txt", 'w')
 
 start = time.time()
 #for line in f: #loop through JSONs in file
-for _ in range(5000):
+for _ in range(1000):
   line = f.readline()
   doc = json.loads(line)
   shuttles = [] #list of tuples of lat longs
@@ -79,21 +78,14 @@ for _ in range(5000):
   
   #if len(shuttles) > 1: #more than 1 bus on map right now
   if len(shuttles) == 2: #only look at two bus situations now
+    heat_points.extend(shuttles)
+    for s in shuttles:
+        heat_points_f.write('%s,%s\n' % (s))
     indicies = [map_point(s) for s in shuttles] #map points of buses
     distribution.append(sum_graph(*indicies))
-    #indicies.reverse()
-    #distribution.append(sum_graph(*indicies))
+    distribution_f.write(str(distribution[-1]) + '\n')
+    
   
-print(distribution)
 print(time.time() - start)
-
-n, bins, patches = plt.hist(distribution, 50, normed=1, facecolor='green')
-print(bins)
-mu = np.mean(distribution)
-sigma = np.std(distribution)
-y = mlab.normpdf(bins, mu, sigma)
-plt.plot(bins, y, 'r--', linewidth=1)
-plt.show()
-
 
 
