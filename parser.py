@@ -1,13 +1,39 @@
 import json, csv, time
 from geopy.distance import great_circle as distance
-from multiprocessing import Pool
+#from multiprocessing import Pool
+import matplotlib.pyplot as plt
+import matplotlib.mlab as mlab
+import numpy as np
+
 
 def load_points():
+  '''read coordinates of route points from coordinates.csv into memory'''
   reader = csv.reader(open("coordinates.csv"), quoting=csv.QUOTE_NONNUMERIC)
   points = [(lat, lng) for i,lat,lng in reader]
   return points
 
+def load_graph():
+  '''Calculate graph of distances between route points
+  Each index i holds distance from i to i+1'''
+  dists = []
+  for i in range(len(points)):
+    d = distance(points[i], points[(i+1) % len(points)])
+    dists.append(d.miles)
+  return dists
+
+def sum_graph(i, j):
+  '''sum graph [i,j) to determine distance b/w indicies i and j
+  Automatically perform wraparound'''
+  if i < j: #normal case, no wraparound
+    return sum(graph[i:j])
+  elif i > j: #destination point is earlier in list, wrap around
+    return sum(graph[i:]) + sum(graph[:j])
+  else:
+      return 0
+
+
 def map_point(s): 
+  '''Map point s to closest point on route, return index of route point'''
   running_min = float("inf")
   point_index = None #index of closest point on map
   for i, p in enumerate(points):
@@ -18,6 +44,7 @@ def map_point(s):
   return point_index
 
 
+"""
 def distance_wrapper(x):
   #perform distance calculation based on tuple of points
   return distance(x[0], x[1]).miles
@@ -28,34 +55,45 @@ def parallel_map_point(s):
   min_dist = min(dists) 
   index = dists.index(min_dist)
   return index
+  """
 
 
 
 
 
 
-
-
-points = load_points()
-pool = Pool()
+points = load_points() #read route into memory
+graph = load_graph() #load graph of distances between points
 f = open("dump1")
+distribution = []
 
-#loop through json's here
 start = time.time()
-#for line in f:
-for _ in range(1000):
+#for line in f: #loop through JSONs in file
+for _ in range(5000):
   line = f.readline()
   doc = json.loads(line)
   shuttles = [] #list of tuples of lat longs
-  for v in doc['get_vehicles']:
-    # if Campus shuttle, and in service
-    if v['routeID'] == 8 and v['scheduleNumber'] != 'NIS': 
+  for v in doc['get_vehicles']: # if Campus shuttle, and in service
+    if v['routeID'] == 8 and v['scheduleNumber'] != 'NIS':
       shuttles.append( (v['lat'], v['lng']) )
   
-  if len(shuttles) > 1: #more than 1 bus on map right now
+  #if len(shuttles) > 1: #more than 1 bus on map right now
+  if len(shuttles) == 2: #only look at two bus situations now
     indicies = [map_point(s) for s in shuttles] #map points of buses
-    print(indicies)
-    #indicies = [parallel_map_point(s) for s in shuttles] #map points of buses
-    #print(indicies)  
+    distribution.append(sum_graph(*indicies))
+    #indicies.reverse()
+    #distribution.append(sum_graph(*indicies))
   
+print(distribution)
 print(time.time() - start)
+
+n, bins, patches = plt.hist(distribution, 50, normed=1, facecolor='green')
+print(bins)
+mu = np.mean(distribution)
+sigma = np.std(distribution)
+y = mlab.normpdf(bins, mu, sigma)
+plt.plot(bins, y, 'r--', linewidth=1)
+plt.show()
+
+
+
