@@ -19,11 +19,11 @@ for stop in stops: #TODO: swap with filter
     cs_stops.append((stop['id'], stop['lat'], stop['lng'], stop['name']))
 
 
-#n^2 find closest route point for each stop, record stop_id,route_point_id
+#n^2 find closest route point for each stop, record stop_id,route_index
 f = open("stop_correspondences.txt", 'w')
 for stop in cs_stops:
   dists = [distance((stop[1],stop[2]), (r[1],r[2])).miles for r in route]
   r_index = dists.index(min(dists))
-  r_id = route[r_index][0]
-  f.write('%d,%d,%s\n' % (stop[0], r_id, stop[3]))
+  #r_id = route[r_index][0]
+  f.write('%d,%d,%s\n' % (stop[0], r_index, stop[3]))
 
